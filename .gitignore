@@ -1,0 +1,30 @@
+# 데이터 (공개 저장소! 절대 커밋 금지)
+*.xdf
+*.fif
+*.edf
+data/sessions/
+data/users/
+data/external/
+data/raw/
+outputs/*
+!outputs/.gitkeep
+!data/sample/.gitkeep
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# 개인 문서
+*서약서*
+*.hwp
+.env
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/settings.json

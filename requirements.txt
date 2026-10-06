@@ -1,0 +1,18 @@
+# 분석 코어
+numpy>=1.26
+scipy>=1.11
+pandas>=2.1
+matplotlib>=3.8
+mne>=1.7
+pyxdf>=1.16
+pylsl>=1.16
+scikit-learn>=1.4   # 공개 데이터 LOSO 분류
+# 과제 실행
+pygame>=2.5
+# 예비 앱/대시보드 (필요한 사람만)
+fastapi>=0.110
+uvicorn>=0.29
+streamlit>=1.35
+# 개발
+pytest>=8
+ruff>=0.5

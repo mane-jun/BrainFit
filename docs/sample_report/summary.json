@@ -1,0 +1,321 @@
+{
+  "meta": {
+    "source": "synthetic",
+    "mode": "standard",
+    "seed": 0,
+    "true_iaf": 10.0,
+    "fatigue": 1.0,
+    "filtered": true
+  },
+  "quality": {
+    "good_window_ratio": 1.0,
+    "TP9_good_ratio": 1.0,
+    "AF7_good_ratio": 0.806,
+    "AF8_good_ratio": 0.804,
+    "TP10_good_ratio": 1.0,
+    "by_segment": {
+      "block": 1.0,
+      "other": 1.0,
+      "rest_ec": 1.0,
+      "rest_ec_post": 1.0,
+      "rest_eo": 1.0
+    },
+    "usable": true
+  },
+  "baseline": {
+    "has_eo": true,
+    "has_ec": true,
+    "alpha_eo": 53.70428962907818,
+    "alpha_ec": 253.2198440168089,
+    "iaf_peak": 10.44,
+    "iaf_cog": 10.01,
+    "alpha_prominence": 88.27,
+    "alpha_reactivity": 4.72,
+    "eo_n_windows": 120,
+    "eo_stats": {
+      "log_engagement": {
+        "mean": -1.5422482906507544,
+        "sd": 0.24642052309535986
+      },
+      "log_workload": {
+        "mean": -0.5843680037424639,
+        "sd": 0.401154132904692
+      },
+      "log_fatigue": {
+        "mean": 1.5422482906506416,
+        "sd": 0.24642052309535933
+      },
+      "theta_rel": {
+        "mean": 0.20815873471379398,
+        "sd": 0.06229341055428071
+      },
+      "alpha_rel": {
+        "mean": 0.44907274018345195,
+        "sd": 0.08341688987880905
+      },
+      "beta_rel": {
+        "mean": 0.14639920027775508,
+        "sd": 0.027774701024780208
+      }
+    }
+  },
+  "sustained": {
+    "sustained_min": 3.4,
+    "censored": false
+  },
+  "fatigue": {
+    "fatigue_slope_per_10min": 4.39,
+    "fatigue_r": 0.806,
+    "fatigue_p": 2.8715403340277035e-292,
+    "ec_alpha_change_pct": 32.7,
+    "ec_theta_change_pct": 69.8,
+    "accuracy_first_half": 0.929,
+    "accuracy_second_half": 0.855
+  },
+  "answers": {
+    "longest_focus_task": "gonogo",
+    "fastest_decline_task": "nback1",
+    "by_task": {
+      "gonogo": {
+        "engagement_z": 1.965,
+        "engagement_slope_per_min": -0.224,
+        "retention": 0.991
+      },
+      "nback1": {
+        "engagement_z": 0.395,
+        "engagement_slope_per_min": -0.863,
+        "retention": 0.629
+      },
+      "nback2": {
+        "engagement_z": 0.831,
+        "engagement_slope_per_min": 0.904,
+        "retention": 0.768
+      },
+      "oddball": {
+        "engagement_z": -1.24,
+        "engagement_slope_per_min": -0.302,
+        "retention": 0.121
+      }
+    }
+  },
+  "profile": {
+    "age_band": "adult",
+    "axes": {
+      "speed": {
+        "ko": "반응속도",
+        "score": 36,
+        "raw": 0.402,
+        "z": -0.37
+      },
+      "inhibition": {
+        "ko": "억제조절",
+        "score": 31,
+        "raw": 0.2,
+        "z": -0.5
+      },
+      "wm": {
+        "ko": "작업기억",
+        "score": 35,
+        "raw": 1.663,
+        "z": -0.37
+      },
+      "attention": {
+        "ko": "주의 정확성",
+        "score": 15,
+        "raw": 2.677,
+        "z": -1.03
+      },
+      "sustain": {
+        "ko": "집중 유지",
+        "score": 73,
+        "raw": 0.62,
+        "z": 0.6
+      },
+      "p300": {
+        "ko": "뇌 반응(P300)",
+        "score": 65,
+        "raw": 5.18,
+        "z": 0.39
+      }
+    },
+    "scores_ko": {
+      "반응속도": 36,
+      "억제조절": 31,
+      "작업기억": 35,
+      "주의 정확성": 15,
+      "집중 유지": 73,
+      "뇌 반응(P300)": 65
+    },
+    "composite_behavior": 29,
+    "sustained_min": 3.4,
+    "sustained_censored": false,
+    "unmeasured": [],
+    "reference_note": "기준값은 임시값(파일럿 데이터로 교체 예정)",
+    "disclaimer": "본 결과는 학습·훈련용 참고 지표이며 의학적 진단이 아닙니다."
+  },
+  "recommendations": [
+    {
+      "axis": "attention",
+      "training": "주의 정확성 훈련",
+      "how": "Oddball·Flanker 변형 5분, 방해 자극 추가",
+      "why": "주의 정확성 15점"
+    },
+    {
+      "axis": "inhibition",
+      "training": "억제조절 훈련",
+      "how": "Go/No-Go·Stroop 5분, No-Go 비율 25→35%",
+      "why": "억제조절 31점"
+    }
+  ],
+  "erp": {
+    "n_target_clean": 36,
+    "n_standard_clean": 144,
+    "n_target_total": 36,
+    "p300_amp_uv": 5.18,
+    "p300_peak_uv": 7.52,
+    "p300_latency_ms": 410.0,
+    "valid": true
+  },
+  "behavior": [
+    {
+      "task": "gonogo",
+      "block": 1.0,
+      "n_trials": 100,
+      "accuracy": 0.93,
+      "hit_rate": 0.9733333333333334,
+      "omission": 0.026666666666666616,
+      "fa_rate": 0.2,
+      "dprime": 2.6409499000598906,
+      "rt_mean": 0.38880821917808217,
+      "rt_median": 0.402,
+      "rt_cv": 0.20516835044716672,
+      "lapses": null
+    },
+    {
+      "task": "nback1",
+      "block": 2.0,
+      "n_trials": 21,
+      "accuracy": 1.0,
+      "hit_rate": 1.0,
+      "omission": 0.0,
+      "fa_rate": 0.0,
+      "dprime": 3.272504087434068,
+      "rt_mean": 0.6836,
+      "rt_median": 0.696,
+      "rt_cv": 0.1413617317601658,
+      "lapses": null
+    },
+    {
+      "task": "nback1",
+      "block": 5.0,
+      "n_trials": 21,
+      "accuracy": 0.8571428571428571,
+      "hit_rate": 0.6666666666666666,
+      "omission": 0.33333333333333337,
+      "fa_rate": 0.0,
+      "dprime": 2.1541455049262743,
+      "rt_mean": 0.7201666666666666,
+      "rt_median": 0.7324999999999999,
+      "rt_cv": 0.14828812648244705,
+      "lapses": null
+    },
+    {
+      "task": "nback2",
+      "block": 3.0,
+      "n_trials": 22,
+      "accuracy": 0.7727272727272727,
+      "hit_rate": 0.6,
+      "omission": 0.4,
+      "fa_rate": 0.08333333333333333,
+      "dprime": 1.4282638198861568,
+      "rt_mean": 0.8083333333333335,
+      "rt_median": 0.8234999999999999,
+      "rt_cv": 0.11583944822886866,
+      "lapses": null
+    },
+    {
+      "task": "nback2",
+      "block": 4.0,
+      "n_trials": 22,
+      "accuracy": 0.8636363636363636,
+      "hit_rate": 0.8571428571428571,
+      "omission": 0.1428571428571429,
+      "fa_rate": 0.13333333333333333,
+      "dprime": 1.8971367282684581,
+      "rt_mean": 0.8330000000000001,
+      "rt_median": 0.8320000000000001,
+      "rt_cv": 0.04990302446777074,
+      "lapses": null
+    },
+    {
+      "task": "oddball",
+      "block": 6.0,
+      "n_trials": 180,
+      "accuracy": 0.9277777777777778,
+      "hit_rate": 0.8888888888888888,
+      "omission": 0.11111111111111116,
+      "fa_rate": 0.0625,
+      "dprime": 2.676953643653696,
+      "rt_mean": 0.4928125,
+      "rt_median": 0.5,
+      "rt_cv": 0.13834155830483094,
+      "lapses": null
+    }
+  ],
+  "blocks": [
+    {
+      "task": "gonogo",
+      "block": 1.0,
+      "n_windows": 338,
+      "engagement_z": 1.965413200802269,
+      "workload_z": 1.8136738622221489,
+      "engagement_slope_per_min": -0.22367495647616356,
+      "retention": 0.9911242603550295
+    },
+    {
+      "task": "nback1",
+      "block": 2.0,
+      "n_windows": 105,
+      "engagement_z": 0.992362868576484,
+      "workload_z": 1.8130058449347306,
+      "engagement_slope_per_min": -0.6704939681885517,
+      "retention": 0.8476190476190476
+    },
+    {
+      "task": "nback1",
+      "block": 5.0,
+      "n_windows": 105,
+      "engagement_z": -0.202515539034595,
+      "workload_z": 1.5250129023051702,
+      "engagement_slope_per_min": -1.0562695122316739,
+      "retention": 0.4095238095238095
+    },
+    {
+      "task": "nback2",
+      "block": 3.0,
+      "n_windows": 110,
+      "engagement_z": 1.071258735363118,
+      "workload_z": 3.280404975803841,
+      "engagement_slope_per_min": 1.2460138910788419,
+      "retention": 0.8454545454545455
+    },
+    {
+      "task": "nback2",
+      "block": 4.0,
+      "n_windows": 110,
+      "engagement_z": 0.5912782862429217,
+      "workload_z": 3.110064899250888,
+      "engagement_slope_per_min": 0.5618315044234368,
+      "retention": 0.6909090909090909
+    },
+    {
+      "task": "oddball",
+      "block": 6.0,
+      "n_windows": 506,
+      "engagement_z": -1.2403727616556244,
+      "workload_z": 0.9292377643171759,
+      "engagement_slope_per_min": -0.3022671771452715,
+      "retention": 0.12055335968379446
+    }
+  ]
+}
