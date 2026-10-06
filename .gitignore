@@ -28,3 +28,7 @@ venv/
 .DS_Store
 Thumbs.db
 .vscode/settings.json
+
+# 웹
+web/node_modules/
+web/dist/

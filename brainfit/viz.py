@@ -154,7 +154,7 @@ def fig_fatigue(tl: pd.DataFrame, fatigue: dict):
     extra = ""
     if "ec_alpha_change_pct" in fatigue:
         extra = f" | 사후 눈감기 알파 {fatigue['ec_alpha_change_pct']:+.0f}%, 세타 {fatigue['ec_theta_change_pct']:+.0f}%"
-    ax.set_title("피로 지표 (θ+α)/β 추세" + extra, fontsize=10)
+    ax.set_title("피로 지표 (θ+α)/(α+β) 추세" + extra, fontsize=10)
     ax.set_xlabel("과제 누적 시간 (분)")
     ax.set_ylabel("Fatigue z")
     fig.tight_layout()

@@ -8,25 +8,38 @@
   POST /sessions/analyze        {"xdf_path": "...", "user": "..."} → summary JSON
   GET  /users/{user}/history    개인 기준선 이력
   GET  /reports/{name}/{file}   그림 PNG
-  WS   /live                    (TODO) 실시간 집중 지표 스트림
+  라이브 데모: server/live.py (/api/live/*, /ws/live) — docs/LIVE_DEMO.md
+  디버그 화면: http://localhost:8000/  (→ /static/debug.html)
 """
 import json
 import sys
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, WebSocket
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "server"))
 from brainfit.io import load_xdf  # noqa: E402
 from brainfit.report import analyze, save_report  # noqa: E402
 from brainfit.synth import synthetic_session  # noqa: E402
+from server.live import router as live_router  # noqa: E402
 
-app = FastAPI(title="BrainFit API", version="0.1.0")
+app = FastAPI(title="BrainFit API", version="0.2.0")
 OUT, USERS = ROOT / "outputs", ROOT / "data" / "users"
+app.include_router(live_router)
+(OUT / "live").mkdir(parents=True, exist_ok=True)
+app.mount("/live-files", StaticFiles(directory=OUT / "live"), name="live-files")
+app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static")
+
+
+@app.get("/")
+def root():
+    return RedirectResponse("/static/debug.html")
 
 
 class AnalyzeReq(BaseModel):
@@ -68,10 +81,3 @@ def report_file(name: str, file: str):
     return FileResponse(p)
 
 
-@app.websocket("/live")
-async def live(ws: WebSocket):
-    """TODO(3번 확장): pylsl inlet → 0.5초마다 {"t":..,"engagement_z":..} 전송.
-    scripts/live_monitor.py 의 계산 로직을 brainfit/realtime.py 로 옮겨 재사용할 것."""
-    await ws.accept()
-    await ws.send_json({"todo": "not implemented"})
-    await ws.close()

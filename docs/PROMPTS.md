@@ -17,7 +17,52 @@
 
 ---
 
-## 단계별 프롬프트 (복사해서 사용)
+## 라이브 데모 웹 (본선) — 단계별 프롬프트
+계획서: `docs/plans/2026-10-08-live-demo-web.md`, 설계: `docs/LIVE_DEMO.md`. 각 단계는 `/live-phase P1` 처럼 실행해도 된다.
+
+**0. 시작 전 (처음 한 번)**
+```
+CLAUDE.md, docs/LIVE_DEMO.md, docs/plans/2026-10-08-live-demo-web.md, server/live.py,
+brainfit/realtime/*.py, server/static/debug.html 을 읽고, 라이브 데모의 데이터 흐름을 10줄로 요약해줘.
+특히 /ws/live tick 메시지와 활동 컴포넌트 계약(ActivityProps)을 정확히 짚어줘. 코드는 아직 수정하지 마.
+```
+
+**P1 골격 + 실시간 패널**
+```
+/live-phase P1
+추가 요구: debug.html 의 drawWave/drawTrend/drawHead 로직을 React 컴포넌트(Waveform, TrendChart, HeadMap)로
+이식하고, 캔버스는 devicePixelRatio 를 반영해. 오른쪽 실시간 패널은 모든 화면에서 고정으로 보이게 해줘.
+```
+
+**P2 측정 흐름**
+```
+/live-phase P2
+화면 문구 예: "뇌파 기기를 착용해 주세요" → "화면 가운데를 편하게 바라보세요" → "눈을 감고 쉬세요" →
+"분석 중…" → "○○형으로 파악되었습니다". 성향 카드에는 summary, tip, notes 를 보여 주고 근거 수치는 접어 둬.
+```
+
+**P3/P4 활동**
+```
+/live-phase P3
+활동마다 src/activities/<id>.tsx 하나, 순서 생성·채점은 src/activities/logic/<id>.ts 로 분리해서 Vitest 로 테스트해.
+Go/No-Go 순서 규칙은 brainfit/sequences.py 의 spaced_rare_sequence 와 같은 결과가 나오도록.
+```
+
+**P5 결과**
+```
+/live-phase P5
+최종 화면 맨 위에 overall.message 를 크게, 그 아래 활동 카드(반응 뚜렷/약함/보류 배지 + 피드백),
+지표 추이 그래프에는 활동 구간을 음영과 이름으로 표시해줘. 다음 활동 안내 화면의 reason 문장은 강조 상자로.
+```
+
+**P6 실기기**
+```
+/live-phase P6
+실제 Muse 로 세션을 진행한 로그(서버 콘솔, quality 변화)를 붙일게. 블루투스 끊김 감지(파형 1초 이상 정지) 시
+화면 경고와 '녹화 재생으로 전환' 버튼을 만들어줘. 백엔드 RESPONSIVE_Z 보정은 계획서부터.
+```
+
+## 분석 파트 단계별 프롬프트 (복사해서 사용)
 
 ### 공개 Muse 데이터로 파이프라인 검증 (기기 측정 전)
 ```

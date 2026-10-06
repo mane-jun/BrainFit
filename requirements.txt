@@ -11,7 +11,7 @@ scikit-learn>=1.4   # 공개 데이터 LOSO 분류
 pygame>=2.5
 # 예비 앱/대시보드 (필요한 사람만)
 fastapi>=0.110
-uvicorn>=0.29
+uvicorn[standard]>=0.29   # WebSocket 포함
 streamlit>=1.35
 # 개발
 pytest>=8

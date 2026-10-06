@@ -13,6 +13,13 @@ python scripts/analyze_session.py --synthetic --user demo      # outputs/ 에 �
 python tasks/battery.py --auto --speed 60 --mode demo          # 과제 앱 자동 실행 테스트
 ```
 
+## 라이브 데모 (본선용)
+```bash
+uvicorn server.main:app --reload     # http://localhost:8000 → 입력 '시뮬레이터'로 기기 없이 전체 흐름 확인
+```
+실제 Muse: BlueMuse Start Streaming 후 입력을 'Muse 2 (LSL)'로. 녹화 재생: `data/demo/synthetic_demo.npz`.
+설계는 [LIVE_DEMO](docs/LIVE_DEMO.md), 웹 구현 계획은 [plans/2026-10-08-live-demo-web](docs/plans/2026-10-08-live-demo-web.md).
+
 ## 실측
 1. Muse 2 → BlueMuse `Start Streaming`
 2. `python tasks/battery.py --user p01 --mode standard` (노년층 `senior`, 시연 `demo`)
@@ -32,4 +39,4 @@ python tasks/battery.py --auto --speed 60 --mode demo          # 과제 앱 자�
 | 08_erp | Oddball P300 |
 
 ## 문서
-[BATTERY](docs/BATTERY.md) · [PLAN](docs/PLAN.md) · [PROTOCOL](docs/PROTOCOL.md) · [MARKERS](docs/MARKERS.md) · [METRICS](docs/METRICS.md) · [EEG_PRIMER](docs/EEG_PRIMER.md) · [DATASETS](docs/DATASETS.md) · [GIT_SETUP](docs/GIT_SETUP.md) · [PROMPTS](docs/PROMPTS.md) · Claude Code 규칙: [CLAUDE.md](CLAUDE.md)
+[LIVE_DEMO](docs/LIVE_DEMO.md) · [BATTERY](docs/BATTERY.md) · [PLAN](docs/PLAN.md) · [PROTOCOL](docs/PROTOCOL.md) · [MARKERS](docs/MARKERS.md) · [METRICS](docs/METRICS.md) · [EEG_PRIMER](docs/EEG_PRIMER.md) · [DATASETS](docs/DATASETS.md) · [GIT_SETUP](docs/GIT_SETUP.md) · [PROMPTS](docs/PROMPTS.md) · Claude Code 규칙: [CLAUDE.md](CLAUDE.md)

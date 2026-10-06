@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BrainFit 라이브 (디버그)</title>
+<style>
+  :root { --bg:#0f1117; --card:#181b24; --line:#2a2f3c; --fg:#e7e9ee; --mute:#8a90a0;
+          --ok:#3ecf8e; --warn:#f5b84b; --bad:#ef5a5a; --a:#f08a4b; --t:#5b8def; --b:#3ecf8e; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:"Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif; background:var(--bg); color:var(--fg); }
+  header { padding:14px 20px; border-bottom:1px solid var(--line); display:flex; gap:16px; align-items:center; flex-wrap:wrap; }
+  header h1 { font-size:18px; margin:0; }
+  .pill { padding:3px 10px; border-radius:999px; background:var(--card); border:1px solid var(--line); font-size:13px; }
+  main { display:grid; grid-template-columns: 1.6fr 1fr; gap:14px; padding:14px 20px; }
+  @media (max-width: 1000px) { main { grid-template-columns:1fr; } }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; }
+  .card h2 { font-size:14px; margin:0 0 10px; color:var(--mute); font-weight:600; }
+  canvas { width:100%; display:block; }
+  button { background:#2b3242; color:var(--fg); border:1px solid #3a4256; border-radius:8px; padding:8px 12px; cursor:pointer; font-size:14px; }
+  button.primary { background:#3557d6; border-color:#3557d6; }
+  button:disabled { opacity:.4; cursor:default; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .q { display:grid; grid-template-columns: repeat(4,1fr); gap:6px; }
+  .q div { text-align:center; padding:6px; border-radius:8px; background:#11141b; font-size:13px; }
+  .bar { height:14px; border-radius:7px; background:#11141b; overflow:hidden; }
+  .bar > i { display:block; height:100%; }
+  .kv { display:grid; grid-template-columns: 90px 1fr 48px; gap:6px; align-items:center; font-size:13px; margin:5px 0; }
+  #stage { min-height:260px; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:12px; text-align:center; }
+  #stim { width:180px; height:180px; display:flex; align-items:center; justify-content:center; }
+  .note { color:var(--mute); font-size:12px; }
+  pre { white-space:pre-wrap; font-size:12px; background:#11141b; padding:10px; border-radius:8px; max-height:300px; overflow:auto; }
+  .imgs img { width:100%; border-radius:8px; margin-top:8px; background:#fff; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🧠 BrainFit 라이브 <span class="note">(엔진 검증용 화면 — 정식 UI 는 web/ 에서)</span></h1>
+  <span class="pill" id="pPhase">대기</span>
+  <span class="pill" id="pState">-</span>
+  <span class="pill" id="pSrc">-</span>
+  <select id="srcSel"><option value="sim">시뮬레이터(기기 없음)</option><option value="lsl">Muse 2 (LSL)</option><option value="replay">녹화 재생</option></select>
+  <input id="replayPath" placeholder="data/demo/synthetic_demo.npz" style="width:230px" />
+  <button class="primary" id="bStart">뇌파 테스트 시작</button>
+</header>
+<main>
+  <section>
+    <div class="card"><h2>진행</h2><div id="stage"><div style="font-size:20px">시작 버튼을 눌러 주세요</div></div></div>
+    <div class="card" style="margin-top:14px"><h2>실시간 뇌파 (필터 1–40 Hz, µV)</h2><canvas id="wave" height="260"></canvas></div>
+    <div class="card" style="margin-top:14px"><h2>지표 추이 (휴식 대비 z)</h2><canvas id="trend" height="160"></canvas>
+      <div class="note">파랑=몰입 β/(α+θ) · 주황=작업 부하 θ(이마)/α(귀 뒤) · 회색=피로 (θ+α)/(α+β)</div></div>
+  </section>
+  <section>
+    <div class="card"><h2>신호 품질 (최근 10초, 깨끗한 구간 비율)</h2><div class="q" id="qual"></div>
+      <div class="note" id="qnote"></div></div>
+    <div class="card" style="margin-top:14px"><h2>센서 위치별 활동 <select id="hbBand"><option>alpha</option><option>theta</option><option>beta</option></select></h2>
+      <svg id="head" viewBox="0 0 220 200" width="100%" height="200"></svg>
+      <div class="note">점 4개(Muse 센서) 값만 표시합니다. 색=휴식 대비 변화(z, 빨강↑ 파랑↓). 뇌 내부 위치를 뜻하지 않습니다.</div></div>
+    <div class="card" style="margin-top:14px"><h2>대역 구성 (상대 파워)</h2><div id="rel"></div></div>
+    <div class="card" style="margin-top:14px"><h2>오늘의 뇌파 성향</h2><div id="type" class="note">기준선 측정 후 표시</div></div>
+    <div class="card" style="margin-top:14px"><h2>결과</h2><div id="result" class="note">모든 활동 후 표시</div></div>
+  </section>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const CH = ["TP9","AF7","AF8","TP10"], CHKO = {TP9:"왼쪽 귀 뒤",AF7:"왼쪽 이마",AF8:"오른쪽 이마",TP10:"오른쪽 귀 뒤"};
+const POS = {TP9:[38,120], AF7:[78,48], AF8:[142,48], TP10:[182,120]};
+let snap = null, wave = CH.map(()=>[]), trend = [], blockNo = 0;
+const api = (p, body) => fetch(p, body===undefined?{}:{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}).then(r=>r.json());
+const sleep = ms => new Promise(r=>setTimeout(r, ms));
+const stage = html => $("stage").innerHTML = html;
+
+// ── WebSocket ────────────────────────────────────────────────
+function connect(){
+  const ws = new WebSocket(`ws://${location.host}/ws/live`);
+  ws.onmessage = e => { const m = JSON.parse(e.data); if(m.type!=="tick") return;
+    snap = m.snapshot; m.wave.data.forEach((arr,i)=>{ wave[i]=wave[i].concat(arr).slice(-128*5); });
+    if(snap.z) trend.push(snap.z), trend = trend.slice(-240);
+    render(); };
+  ws.onclose = () => setTimeout(connect, 1000);
+}
+connect();
+
+function render(){
+  if(!snap) return;
+  $("pPhase").textContent = `단계: ${snap.phase}${snap.activity?" · "+snap.activity:""}`;
+  $("pState").textContent = `상태: ${snap.state_label||"-"}`;
+  $("pSrc").textContent = `입력: ${snap.source} · t=${snap.t}s`;
+  if(snap.quality){
+    $("qual").innerHTML = CH.map(c=>{const v=snap.quality[c]; const col=v>=.7?"var(--ok)":v>=.4?"var(--warn)":"var(--bad)";
+      return `<div style="border:1px solid ${col}">${CHKO[c]}<br><b style="color:${col}">${Math.round(v*100)}%</b></div>`}).join("");
+    $("qnote").textContent = snap.quality_status==="poor" ? "⚠ 센서가 피부에 잘 닿지 않았어요. 머리카락을 정리하고 다시 써 주세요." : "";
+  }
+  if(snap.rel){ const cols={delta:"#777",theta:"var(--t)",alpha:"var(--a)",beta:"var(--b)"};
+    $("rel").innerHTML = Object.entries(snap.rel).map(([b,v])=>`<div class="kv"><span>${b}</span><div class="bar"><i style="width:${Math.min(100,(v||0)*100)}%;background:${cols[b]}"></i></div><span>${v?Math.round(v*100):"-"}%</span></div>`).join(""); }
+  drawWave(); drawTrend(); drawHead();
+}
+function drawWave(){
+  const cv=$("wave"), g=cv.getContext("2d"); cv.width=cv.clientWidth*devicePixelRatio; cv.height=260*devicePixelRatio;
+  g.scale(devicePixelRatio,devicePixelRatio); const W=cv.clientWidth, H=260, h=H/4;
+  g.clearRect(0,0,W,H); g.font="12px sans-serif";
+  wave.forEach((arr,i)=>{ g.fillStyle="#8a90a0"; g.fillText(`${CH[i]} (${CHKO[CH[i]]})`,6,i*h+14);
+    g.strokeStyle=["#5b8def","#f08a4b","#e45b9b","#3ecf8e"][i]; g.beginPath();
+    arr.forEach((v,k)=>{ const x=k/(128*5)*W, y=i*h+h/2 - Math.max(-h/2,Math.min(h/2,v/120*h/2)); k?g.lineTo(x,y):g.moveTo(x,y); }); g.stroke(); });
+}
+function drawTrend(){
+  const cv=$("trend"), g=cv.getContext("2d"); cv.width=cv.clientWidth*devicePixelRatio; cv.height=160*devicePixelRatio;
+  g.scale(devicePixelRatio,devicePixelRatio); const W=cv.clientWidth, H=160, y=v=>H/2-Math.max(-3,Math.min(3,v))/3*(H/2-6);
+  g.clearRect(0,0,W,H); g.strokeStyle="#2a2f3c"; [0,1,-1].forEach(v=>{g.beginPath();g.moveTo(0,y(v));g.lineTo(W,y(v));g.stroke();});
+  [["engagement","#5b8def"],["workload","#f08a4b"],["fatigue","#8a90a0"]].forEach(([k,c])=>{ g.strokeStyle=c; g.beginPath(); let s=false;
+    trend.forEach((z,i)=>{ if(z[k]==null) {s=false; return;} const X=i/240*W; s?g.lineTo(X,y(z[k])):g.moveTo(X,y(z[k])); s=true;}); g.stroke(); });
+}
+function drawHead(){
+  const band=$("hbBand").value, svg=$("head");
+  const col=z=>{ if(z==null) return "#3a4256"; const t=Math.max(-1,Math.min(1,z/2));
+    return t>=0?`rgb(${150+105*t},${90-40*t},${90-40*t})`:`rgb(${90+40*t},${110+20*t},${160-95*t})`; };
+  let s=`<ellipse cx="110" cy="105" rx="90" ry="88" fill="none" stroke="#3a4256" stroke-width="2"/>
+         <path d="M100 18 L110 4 L120 18" fill="none" stroke="#3a4256" stroke-width="2"/>`;
+  CH.forEach(c=>{ const z=snap&&snap.head?snap.head[c][band]:null; const [x,y]=POS[c];
+    s+=`<circle cx="${x}" cy="${y}" r="20" fill="${col(z)}"/><text x="${x}" y="${y+4}" font-size="10" text-anchor="middle" fill="#fff">${c}</text>
+        <text x="${x}" y="${y+34}" font-size="10" text-anchor="middle" fill="#8a90a0">${z==null?"-":(z>0?"+":"")+z}</text>`; });
+  svg.innerHTML=s;
+}
+$("hbBand").onchange=drawHead;
+
+// ── 흐름 ─────────────────────────────────────────────────────
+async function countdown(sec, msg){ for(let s=sec;s>0;s--){ stage(`<div style="font-size:22px">${msg}</div><div style="font-size:40px">${s}</div>`); await sleep(1000);} }
+function beep(){ try{ const a=new AudioContext(), o=a.createOscillator(); o.frequency.value=880; o.connect(a.destination); o.start(); setTimeout(()=>o.stop(),300);}catch(e){} }
+
+$("bStart").onclick = async () => {
+  $("bStart").disabled = true; wave = CH.map(()=>[]); trend = []; blockNo = 0; $("result").innerHTML = "모든 활동 후 표시";
+  const src=$("srcSel").value, rp=$("replayPath").value||null;
+  const r = await api("/api/live/start", {source:src, replay_path:rp, n_activities:4});
+  if(r.detail){ stage(`<div style="color:var(--bad)">${r.detail}</div>`); $("bStart").disabled=false; return; }
+  await api("/api/live/phase", {phase:"signal_check"});
+  stage(`<div style="font-size:22px">뇌파 기기를 착용해 주세요</div><div class="note">신호 품질이 모두 초록색이 되면 다음으로</div><button class="primary" id="go">착용 완료</button>`);
+  await new Promise(res => $("go").onclick = res);
+  await api("/api/live/mark", {event:"rest_eo_start"}); await countdown(30, "화면 가운데를 편하게 바라보세요 (눈 뜬 휴식)");
+  await api("/api/live/mark", {event:"rest_eo_end"});
+  await api("/api/live/mark", {event:"rest_ec_start"}); await countdown(30, "눈을 감고 쉬세요. 소리가 나면 눈을 뜨세요"); beep();
+  const ec = await api("/api/live/mark", {event:"rest_ec_end"});
+  const t = ec.brain_type||{}; stage(`<div style="font-size:16px">분석 중...</div>`); await sleep(1200);
+  $("type").innerHTML = `<div style="font-size:20px;color:var(--fg)">${t.name||"-"}</div><p>${t.summary||""}</p><p>💡 ${t.tip||""}</p><p>${(t.notes||[]).join("<br>")}</p><p class="note">${t.disclaimer||""}</p>`;
+  stage(`<div style="font-size:22px">파악되었습니다: <b>${t.name||"-"}</b></div><div class="note">${t.summary||""}</div><button class="primary" id="go">활동 시작</button>`);
+  await new Promise(res => $("go").onclick = res);
+  while(true){
+    const nx = await api("/api/live/next");
+    if(!nx.activity) break;
+    blockNo += 1;
+    stage(`<div class="note">활동 ${nx.index}/${nx.total}</div><div style="font-size:22px">${nx.name}</div><div>${nx.how}</div><div class="note">${nx.reason}</div><button class="primary" id="go">시작</button>`);
+    await new Promise(res => $("go").onclick = res);
+    await api("/api/live/mark", {event:"block_start", attrs:{task:nx.task, block:blockNo}});
+    if(nx.activity==="gonogo") await runGoNoGo(nx, blockNo, 40); else await runSimulatedActivity(nx, blockNo, 30);
+    const end = await api("/api/live/mark", {event:"block_end", attrs:{task:nx.task, block:blockNo}});
+    const ar = end.activity_result||{};
+    stage(`<div style="font-size:18px">${nx.name} 완료</div><div>뇌파 반응: ${ar.responsive===true?"뚜렷함":ar.responsive===false?"약함":"판단 보류"} ${ar.z?`(몰입 z=${ar.z.engagement}, 부하 z=${ar.z.workload})`:""}</div><div class="note">${(ar.feedback||[]).join("<br>")}</div>`);
+    await countdown(5, "잠깐 쉬어요");
+  }
+  stage(`<div style="font-size:18px">결과 분석 중...</div>`);
+  const res = await api("/api/live/finish");
+  stage(`<div style="font-size:22px">측정 완료</div><div>${res.overall?.message||""}</div>`);
+  $("result").innerHTML = `<p>${res.overall?.message||""}</p>` + (res.activities||[]).map(a=>`<p><b>${a.name}</b> — ${a.responsive?"반응 뚜렷":"반응 약함"}<br><span class="note">${(a.feedback||[]).join(" ")}</span></p>`).join("")
+    + `<div class="imgs">${(res.figures||[]).map(f=>`<img src="${f}">`).join("")}</div><details><summary>JSON</summary><pre>${JSON.stringify(res,null,2)}</pre></details>`;
+  $("bStart").disabled = false;
+};
+
+// 실제로 해 볼 수 있는 활동 1개(Go/No-Go). 나머지 활동은 web/ 에서 구현 — 여기서는 자동 응답으로 흐름만 확인
+async function runGoNoGo(nx, block, n){
+  for(let i=0;i<n;i++){
+    const go = Math.random()<0.75 || i<2; let pressed=-1; const t0=performance.now();
+    stage(`<div id="stim">${go?'<svg width="160" height="160"><circle cx="80" cy="80" r="70" fill="#3ecf8e"/></svg>':'<svg width="160" height="160"><rect x="15" y="15" width="130" height="130" fill="#ef5a5a"/></svg>'}</div><div class="note">스페이스바 = 누르기</div>`);
+    const h = e => { if(e.code==="Space" && pressed<0){ pressed=(performance.now()-t0)/1000; } };
+    document.addEventListener("keydown", h); await sleep(300); stage(`<div id="stim">+</div>`); await sleep(500);
+    document.removeEventListener("keydown", h);
+    const resp = pressed>=0.15?1:0;
+    api("/api/live/trial", {task:nx.task, block, idx:i, target:go?1:0, resp, correct:Number(resp===(go?1:0)), rt:resp?pressed:-1});
+    await sleep(700+Math.random()*400);
+  }
+}
+async function runSimulatedActivity(nx, block, sec){
+  const t0 = Date.now(); let i=0;
+  while((Date.now()-t0)/1000 < sec){
+    stage(`<div style="font-size:18px">${nx.name}</div><div class="note">(디버그 화면: 자동 응답으로 진행 중 — 정식 활동 화면은 web/)</div><div style="font-size:32px">${Math.ceil(sec-(Date.now()-t0)/1000)}</div>`);
+    const target = Math.random()<0.3?1:0, correct = Math.random()<0.85?1:0, resp = correct?target:1-target;
+    api("/api/live/trial", {task:nx.task, block, idx:i++, target, resp, correct, rt:resp?0.4+Math.random()*0.3:-1});
+    await sleep(1500);
+  }
+}
+</script>
+</body>
+</html>

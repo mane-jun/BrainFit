@@ -52,7 +52,9 @@ def window_features(win: np.ndarray, info: pd.DataFrame, ch_names: list[str],
         #  안 빠진 창의 값이 들쭉날쭉해지는 것을 막는다)
         th, al, be = bp["theta"], bp["alpha"], bp["beta"]
         out["log_engagement"] = np.nanmean(np.log(be / (al + th + EPS)), axis=1)  # Pope 1995
-        out["log_fatigue"] = np.nanmean(np.log((th + al) / (be + EPS)), axis=1)    # Jap 2009
+        # 피로: (θ+α)/(α+β) — Jap 2009 의 후보식 중 하나. (θ+α)/β 는 engagement 의 정확한 역수라
+        # 정보가 중복되므로 쓰지 않는다.
+        out["log_fatigue"] = np.nanmean(np.log((th + al) / (al + be + EPS)), axis=1)  # Jap 2009
         theta_f = np.nanmean(th[:, fr], axis=1) if fr else np.full(len(out), np.nan)
         alpha_p = np.nanmean(al[:, tp], axis=1) if tp else np.full(len(out), np.nan)
         out["theta_frontal"] = theta_f

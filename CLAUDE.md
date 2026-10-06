@@ -15,6 +15,9 @@ Muse 2(4채널 EEG)로 **사용자 기준 뇌파(1번)**를 측정하고, Grid N
 
 ## 폴더 구조
 ```
+brainfit/realtime/  라이브 엔진(sources: LSL/Sim/Replay, engine, brain_type, adaptive) — docs/LIVE_DEMO.md
+server/live.py      라이브 API(/api/live/*)·WebSocket(/ws/live), server/static/debug.html 검증 화면
+web/                (예정) 본선용 React 화면 — docs/plans/2026-10-08-live-demo-web.md
 brainfit/datasets/  공개 데이터 로더(registry, cogwear, muse_n400) — docs/DATASETS.md
 brainfit/      분석 패키지 (io → preprocess → features → baseline(1번) → cognitive(3번) → erp(P300)
                → profile(육각형) → recommend(4번) → viz → report)
@@ -37,6 +40,8 @@ python scripts/analyze_session.py --xdf C:/EEGData/exp001/block_Default.xdf --us
 python tasks/battery.py --user <id> --mode standard    # 실측 세션 (senior / demo 모드도 있음)
 python tasks/battery.py --auto --speed 60 --mode demo  # 화면 없이 과제 앱 테스트
 python scripts/analyze_session.py --synthetic --mode senior --age-band senior
+uvicorn server.main:app --reload                             # 라이브 데모 API + http://localhost:8000 (검증 화면)
+python scripts/import_recording.py <xdf> --id p01_s1         # 녹화 → data/demo/*.npz (라이브 재생용, 익명 ID)
 python scripts/download_datasets.py --dataset cogwear       # 공개 데이터 → data/external/ (커밋 금지)
 python scripts/validate_cogwear.py                           # Muse S 휴식 vs Stroop 검증
 python scripts/validate_muse_n400.py --inspect <xdf>         # 실제 Muse .xdf 마커 확인 → 전체 검증
@@ -55,6 +60,7 @@ python scripts/validate_muse_n400.py --inspect <xdf>         # 실제 Muse .xdf 
 10. 능력 점수는 **과제 수행 성과**에서 나온다. 뇌파만으로 언어·기억 능력을 측정한다고 쓰지 말 것.
 11. P300 절대 잠복기를 임상 논문(치매·MCI) 값과 비교하지 말 것(블루투스 지연). 본인 이전 기록과만 비교.
 12. 점수 기준값(HEX_REFERENCE)은 임시값이다. 화면·보고서에 '임시 기준' 표시를 지우지 말 것.
+13. 라이브 화면 문구는 docs/LIVE_DEMO.md 6절(센서 위치 ≠ 뇌 부위, 성향 ≠ 성격·진단)을 따른다.
 
 ## 계약(인터페이스) — 바꾸려면 문서부터
 - 마커 문자열 규약: `docs/MARKERS.md` (`event|key=value|...`). 2번 담당(과제 설계) 팀원과 공유하는 계약이다.
