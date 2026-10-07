@@ -14,11 +14,25 @@ from .io import Session
 EPS = 1e-12
 
 
-def window_psd(win: np.ndarray, sfreq: float):
-    """win: (n_win, n_ch, n_samp) → freqs, psd (n_win, n_ch, n_freq) [µV²/Hz]"""
+def window_psd(win: np.ndarray, sfreq: float, masks: np.ndarray | None = None):
+    """win: (n_win, n_ch, n_samp) V → freqs, psd (n_win, n_ch, n_freq) [µV²/Hz]
+
+    1초 조각마다 스펙트럼을 구해 평균한다(=Welch). masks 가 있으면 0.25초 간격 조각 중
+    가린 샘플이 하나라도 있는 조각은 빼고 평균한다 → 깜빡임 부분만 제외.
+    깨끗한 조각이 하나도 없으면 NaN."""
     nper = min(win.shape[-1], int(sfreq))  # 1초 세그먼트 → 1 Hz 해상도, 2초 창에서 3개 평균
-    f, p = welch(win * 1e6, fs=sfreq, nperseg=nper, noverlap=nper // 2, axis=-1)
-    return f, p
+    if masks is None:
+        return welch(win * 1e6, fs=sfreq, nperseg=nper, noverlap=nper // 2, axis=-1)
+    starts = list(range(0, win.shape[-1] - nper + 1, nper // 4))  # 0.25초 간격 → 깨끗한 1초를 더 잘 찾음
+    segs = np.stack([win[..., s:s + nper] for s in starts], axis=-2) * 1e6   # (.., n_seg, nper)
+    f, p = welch(segs, fs=sfreq, nperseg=nper, noverlap=0, axis=-1)         # (.., n_seg, n_f)
+    valid = np.stack([~masks[..., s:s + nper].any(-1) for s in starts], axis=-1)
+    p = np.where(valid[..., None], p, np.nan)
+    with np.errstate(all="ignore"):
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            return f, np.nanmean(p, axis=-2)
 
 
 def band_power(f: np.ndarray, psd: np.ndarray, lo: float, hi: float) -> np.ndarray:
@@ -27,9 +41,10 @@ def band_power(f: np.ndarray, psd: np.ndarray, lo: float, hi: float) -> np.ndarr
 
 
 def window_features(win: np.ndarray, info: pd.DataFrame, ch_names: list[str],
-                    sfreq: float) -> pd.DataFrame:
-    """창마다 채널별 대역 파워와 파생 지표를 계산. 나쁜 채널 값은 NaN."""
-    f, psd = window_psd(win, sfreq)
+                    sfreq: float, masks: np.ndarray | None = None) -> pd.DataFrame:
+    """창마다 채널별 대역 파워와 파생 지표를 계산. 나쁜 채널 값은 NaN.
+    masks(n_win, n_ch, n_samp, True=가림)가 있으면 깜빡임 부분을 뺀 조각들로 계산."""
+    f, psd = window_psd(win, sfreq, masks)
     good = np.stack([info[f"good_{c}"].to_numpy() for c in ch_names], axis=1)  # (n_win, n_ch)
     total = band_power(f, psd, 1.0, 40.0)
     out = info.copy()

@@ -1,15 +1,19 @@
 """전처리: 필터 → 창 나누기 → 잡음 창 표시.
 
 Muse 는 채널이 4개뿐이라 ICA 같은 고급 잡음 제거가 사실상 불가능하다.
-그래서 '잡음 있는 창은 버린다(reject)' 전략을 쓴다. 버린 비율은 품질 지표로 보고한다.
+그래서 (1) 이마 채널의 눈 깜빡임은 그 부분만 가리고(artifacts.py),
+(2) 그래도 진폭이 큰 창·채널은 버린다(reject). 버린 비율은 품질 지표로 보고한다.
 """
 from __future__ import annotations
+
+import warnings
 
 import numpy as np
 import pandas as pd
 from numpy.lib.stride_tricks import sliding_window_view
 
-from .config import PRE, PreprocessConfig
+from .artifacts import artifact_mask, clean_segment_count
+from .config import FRONTAL, PRE, PreprocessConfig
 from .io import Session
 
 
@@ -21,12 +25,14 @@ def filter_session(sess: Session, cfg: PreprocessConfig = PRE) -> Session:
     return Session(raw=raw, events=sess.events, meta=dict(sess.meta, filtered=True))
 
 
-def make_windows(sess: Session, cfg: PreprocessConfig = PRE):
+def make_windows(sess: Session, cfg: PreprocessConfig = PRE, return_masks: bool = False):
     """연속 신호를 겹치는 창으로 자른다.
 
     반환:
       win: (n_win, n_ch, n_samp) 볼트 단위
-      info: DataFrame[t_start, t_center, good_<ch>..., n_good, good]
+      info: DataFrame[t_start, t_center, good_<ch>..., n_good, good, masked_frontal]
+      (return_masks=True 면) masks: (n_win, n_ch, n_samp) True=깜빡임으로 가린 샘플
+    채널 판정: 가린 샘플을 뺀 나머지의 진폭(ptp)이 기준 이하 + 평탄하지 않음 + 깨끗한 1초 조각 ≥ 1
     """
     x = sess.raw.get_data(picks="eeg")  # Right AUX 등은 자동 제외
     sf = sess.raw.info["sfreq"]
@@ -34,16 +40,25 @@ def make_windows(sess: Session, cfg: PreprocessConfig = PRE):
     win = sliding_window_view(x, w, axis=1)[:, ::s, :].transpose(1, 0, 2)
     t_start = np.arange(win.shape[0]) * s / sf
 
-    uv = win * 1e6
-    ptp = uv.max(axis=2) - uv.min(axis=2)
-    sd = uv.std(axis=2)
-    good_ch = (ptp < cfg.ptp_reject_uv) & (sd > cfg.flat_uv)
+    mask = artifact_mask(x * 1e6, sess.raw.ch_names, sf, cfg)
+    wmask = sliding_window_view(mask, w, axis=1)[:, ::s, :].transpose(1, 0, 2)
+    uv = np.where(wmask, np.nan, win * 1e6)
+    with np.errstate(all="ignore"), warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)
+        ptp = np.nanmax(uv, axis=2) - np.nanmin(uv, axis=2)
+        sd = np.nanstd(uv, axis=2)
+    nclean = clean_segment_count(wmask, min(w, int(sf)))
+    good_ch = (ptp < cfg.ptp_reject_uv) & (sd > cfg.flat_uv) & (nclean >= 1)
 
     info = pd.DataFrame({"t_start": t_start, "t_center": t_start + cfg.win_sec / 2})
     for ci, ch in enumerate(sess.raw.ch_names):
         info[f"good_{ch}"] = good_ch[:, ci]
     info["n_good"] = good_ch.sum(axis=1)
     info["good"] = info["n_good"] >= cfg.min_good_channels
+    fr = [i for i, c in enumerate(sess.raw.ch_names) if c in FRONTAL]
+    info["masked_frontal"] = wmask[:, fr, :].mean(axis=(1, 2)) if fr else 0.0
+    if return_masks:
+        return win, info, wmask
     return win, info
 
 

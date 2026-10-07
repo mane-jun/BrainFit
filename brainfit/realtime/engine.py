@@ -8,13 +8,15 @@
 from __future__ import annotations
 
 import time
+import warnings
 from dataclasses import dataclass, field
 
 import numpy as np
 import pandas as pd
 from scipy.signal import butter, iirnotch, sosfilt, sosfilt_zi, tf2sos, welch
 
-from ..config import BANDS, LINE_FREQ, PRE, TEMPORO_PARIETAL
+from ..artifacts import artifact_mask, clean_segment_count, rising_edges
+from ..config import BANDS, FRONTAL, LINE_FREQ, PRE, TEMPORO_PARIETAL
 from ..features import band_power, individual_alpha_frequency, window_features
 from ..io import Session, events_from_markers, format_marker, make_raw
 from . import adaptive, brain_type
@@ -78,6 +80,8 @@ class RealtimeEngine:
         self.sos = np.vstack([tf2sos(b, a), butter(4, [PRE.l_freq, PRE.h_freq], btype="band",
                                                     fs=self.sf, output="sos")])
         self.t0_wall = time.monotonic()
+        self._fr = [i for i, c in enumerate(self.ch) if c in FRONTAL]
+        self._blinks: list[float] = []
 
     # ── 시간 ────────────────────────────────────────────────────────
     @property
@@ -107,16 +111,31 @@ class RealtimeEngine:
         return n_new
 
     def _analyze_window(self, end: int):
-        seg = self.filt.view(end - self.win, end)  # µV
-        uv = seg
-        ptp = uv.max(1) - uv.min(1)
-        good = (ptp < PRE.ptp_reject_uv) & (uv.std(1) > PRE.flat_uv)
+        ctx = int(PRE.blink_pad_sec * self.sf)               # 창 앞쪽 깜빡임의 여백까지 보기 위한 문맥
+        start = max(0, end - self.win - ctx)
+        full = self.filt.view(start, end)                     # µV
+        m_full = artifact_mask(full, self.ch, self.sf)
+        seg, m = full[:, -self.win:], m_full[:, -self.win:]
+        masked = np.where(m, np.nan, seg)
+        with np.errstate(all="ignore"), warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            ptp = np.nanmax(masked, 1) - np.nanmin(masked, 1)
+            sd = np.nanstd(masked, 1)
+        nclean = clean_segment_count(m, int(self.sf))
+        good = (ptp < PRE.ptp_reject_uv) & (sd > PRE.flat_uv) & (nclean >= 1)
+        # 깜빡임 수 세기: 이번 단계에 새로 '확정된' 구간에서 시작한 가림만 센다(중복 방지)
+        if self._fr:
+            L = m_full.shape[1]
+            edges = rising_edges(m_full[self._fr[0]])
+            new = edges[(edges >= L - self.step - ctx) & (edges < L - ctx)]
+            self._blinks.extend([(end - (L - e)) / self.sf for e in new])
         info = pd.DataFrame({"t_start": [(end - self.win) / self.sf], "t_center": [(end - self.win / 2) / self.sf]})
         for c, g in zip(self.ch, good, strict=True):
             info[f"good_{c}"] = [bool(g)]
         info["n_good"] = int(good.sum())
         info["good"] = info["n_good"] >= PRE.min_good_channels
-        feats = window_features(seg[None] * 1e-6, info, self.ch, self.sf).iloc[0].to_dict()
+        feats = window_features(seg[None] * 1e-6, info, self.ch, self.sf, m[None]).iloc[0].to_dict()
+        feats["masked_frontal"] = float(m[self._fr].mean()) if self._fr else 0.0
         st = self.st
         feats.update({"t": end / self.sf, "phase": st.phase, "activity": st.activity, "block": st.block,
                       "t_in_phase": end / self.sf - st.phase_started})
@@ -228,8 +247,15 @@ class RealtimeEngine:
             return out
         recent = pd.DataFrame(self.windows[-20:])
         out["quality"] = {c: round(float(recent[f"good_{c}"].mean()), 2) for c in self.ch}
-        q = min(out["quality"].values())
-        out["quality_status"] = "good" if q >= 0.7 else ("fair" if q >= 0.4 else "poor")
+        # 판정은 귀 뒤 채널 기준(접촉 상태를 가장 잘 보여 줌) + 이마는 깜빡임을 뺀 뒤의 평균
+        tp = [out["quality"][c] for c in TEMPORO_PARIETAL if c in out["quality"]] or [1.0]
+        af = [out["quality"][c] for c in FRONTAL if c in out["quality"]] or [1.0]
+        q_tp, q_af = min(tp), float(np.mean(af))
+        out["quality_status"] = ("good" if q_tp >= 0.7 and q_af >= 0.5 else
+                                 "fair" if q_tp >= 0.4 else "poor")
+        span = min(60.0, max(self.t, 1e-6))
+        out["blinks_per_min"] = round(sum(1 for b in self._blinks if b >= self.t - span) * 60 / span, 1)
+        out["masked_frontal"] = round(float(recent["masked_frontal"].mean()), 2)
         last = recent.iloc[-smooth:]
         good = last[last["good"]]
         row = good.iloc[-1].to_dict() if len(good) else last.iloc[-1].to_dict()

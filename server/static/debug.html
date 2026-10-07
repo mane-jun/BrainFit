@@ -89,7 +89,8 @@ function render(){
   if(snap.quality){
     $("qual").innerHTML = CH.map(c=>{const v=snap.quality[c]; const col=v>=.7?"var(--ok)":v>=.4?"var(--warn)":"var(--bad)";
       return `<div style="border:1px solid ${col}">${CHKO[c]}<br><b style="color:${col}">${Math.round(v*100)}%</b></div>`}).join("");
-    $("qnote").textContent = snap.quality_status==="poor" ? "⚠ 센서가 피부에 잘 닿지 않았어요. 머리카락을 정리하고 다시 써 주세요." : "";
+    const warn = snap.quality_status==="poor" ? "⚠ 귀 뒤 센서가 피부에 잘 닿지 않았어요. 머리카락을 넘기고 다시 써 주세요. " : "";
+    $("qnote").textContent = warn + `눈 깜빡임 약 ${snap.blinks_per_min ?? "-"}회/분 · 이마 채널은 깜빡임 부분(${Math.round((snap.masked_frontal||0)*100)}%)을 빼고 계산`;
   }
   if(snap.rel){ const cols={delta:"#777",theta:"var(--t)",alpha:"var(--a)",beta:"var(--b)"};
     $("rel").innerHTML = Object.entries(snap.rel).map(([b,v])=>`<div class="kv"><span>${b}</span><div class="bar"><i style="width:${Math.min(100,(v||0)*100)}%;background:${cols[b]}"></i></div><span>${v?Math.round(v*100):"-"}%</span></div>`).join(""); }

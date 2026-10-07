@@ -34,6 +34,10 @@ class PreprocessConfig:
     ptp_reject_uv: float = 150.0  # 창 안 최대-최소 진폭이 이보다 크면 잡음(깜빡임/움직임)
     flat_uv: float = 0.5          # 표준편차가 이보다 작으면 접촉 불량(평탄)
     min_good_channels: int = 2    # 이 수 미만이면 그 창 전체를 버림
+    # 눈 깜빡임 처리: 이마 채널(AF7/AF8)에서 |신호| > blink_uv 인 샘플과 앞뒤 blink_pad_sec 만 가리고,
+    # 나머지(가려지지 않은 1초 조각들)로 대역 파워를 계산한다. 창 전체를 버리지 않는다.
+    blink_uv: float = 100.0
+    blink_pad_sec: float = 0.25
 
 
 @dataclass

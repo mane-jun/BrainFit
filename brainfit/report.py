@@ -42,9 +42,9 @@ def _jsonable(o):
 def compute_features(sess: Session):
     """필터 → 창 → 구간 라벨 → 창별 특징. (공개 데이터 검증 스크립트도 이 함수를 쓴다)"""
     fs = filter_session(sess)
-    win, info = make_windows(fs)
+    win, info, masks = make_windows(fs, return_masks=True)
     info = label_windows(info, fs.segments)
-    feats = window_features(win, info, fs.raw.ch_names, fs.raw.info["sfreq"])
+    feats = window_features(win, info, fs.raw.ch_names, fs.raw.info["sfreq"], masks)
     return fs, feats
 
 
