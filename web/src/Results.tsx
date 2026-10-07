@@ -103,23 +103,23 @@ export function Results({
               data={bars}
               margin={{ top: 12, right: 8, bottom: 18, left: -25 }}
             >
-              <CartesianGrid vertical={false} stroke="#e4e4e4" />
+              <CartesianGrid vertical={false} stroke="var(--chart-grid)" />
               <XAxis
                 dataKey="name"
-                tick={{ fill: "#666666", fontSize: 11 }}
+                tick={{ fill: "var(--muted)", fontSize: 11 }}
                 interval={0}
                 angle={-12}
                 textAnchor="end"
               />
-              <YAxis tick={{ fill: "#666666", fontSize: 11 }} />
+              <YAxis tick={{ fill: "var(--muted)", fontSize: 11 }} />
               <Tooltip
                 contentStyle={{
-                  background: "#ffffff",
-                  borderColor: "#d2d2d2",
-                  color: "#202020",
+                  background: "var(--surface)",
+                  borderColor: "var(--line)",
+                  color: "var(--ink)",
                 }}
               />
-              <Bar dataKey="engagement" name="몰입 z" fill="#545454" />
+              <Bar dataKey="engagement" name="몰입 z" fill="var(--chart-bar)" />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -142,15 +142,15 @@ export function Results({
           </p>
           <ResponsiveContainer width="100%" height={310}>
             <RadarChart data={radar} outerRadius="70%">
-              <PolarGrid stroke="#d2d2d2" />
+              <PolarGrid stroke="var(--chart-grid)" />
               <PolarAngleAxis
                 dataKey="name"
-                tick={{ fill: "#555555", fontSize: 12 }}
+                tick={{ fill: "var(--muted)", fontSize: 12 }}
               />
               <Radar
                 dataKey="score"
-                stroke="#555555"
-                fill="#777777"
+                stroke="var(--chart-label)"
+                fill="var(--chart-bar)"
                 fillOpacity={0.2}
               />
             </RadarChart>

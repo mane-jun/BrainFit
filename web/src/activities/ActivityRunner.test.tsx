@@ -115,10 +115,54 @@ describe("활동 시행 전송", () => {
     });
     const button = screen.getByRole("button", { name: /반응하기/ });
     fireEvent.click(button);
+    expect(screen.getByRole("button", { name: /입력됨/ })).toBeTruthy();
     await act(async () => {
       await vi.advanceTimersByTimeAsync(600);
     });
     expect(trials[0]?.resp).toBe(1);
     expect(trials[0]?.rt).toBeGreaterThanOrEqual(0.15);
+  });
+
+  it("스페이스 입력이 접수되면 버튼에 잠시 피드백을 표시한다", async () => {
+    vi.useFakeTimers({
+      toFake: [
+        "setTimeout",
+        "clearTimeout",
+        "requestAnimationFrame",
+        "cancelAnimationFrame",
+        "performance",
+      ],
+    });
+    const trials: TrialPayload[] = [];
+    render(
+      <ActivityRunner
+        choice={choice("gonogo")}
+        block={1}
+        onTrial={async (trial) => {
+          trials.push(trial);
+        }}
+        onDone={async () => undefined}
+        onError={() => undefined}
+      />,
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3100);
+    });
+    fireEvent.keyDown(window, { code: "Space" });
+    expect(screen.getByRole("button", { name: /반응하기/ })).toBeTruthy();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300);
+    });
+    fireEvent.keyDown(window, { code: "Space" });
+    expect(screen.getByRole("button", { name: /입력됨/ })).toBeTruthy();
+    fireEvent.keyDown(window, { code: "Space", repeat: true });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(250);
+    });
+    expect(screen.getByRole("button", { name: /반응하기/ })).toBeTruthy();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(350);
+    });
+    expect(trials[0]?.resp).toBe(1);
   });
 });

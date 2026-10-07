@@ -9,10 +9,10 @@ const NAMES: Record<Channel, string> = {
   TP10: "오른쪽 귀 뒤",
 };
 const COLORS: Record<Channel, string> = {
-  TP9: "#287fa3",
-  AF7: "#ad7a31",
-  AF8: "#aa5a80",
-  TP10: "#398d75",
+  TP9: "--series-blue",
+  AF7: "--series-amber",
+  AF8: "--series-pink",
+  TP10: "--series-green",
 };
 const POS: Record<Channel, [number, number]> = {
   TP9: [38, 122],
@@ -31,25 +31,32 @@ function prepare(canvas: HTMLCanvasElement, height: number) {
   return { ctx, width };
 }
 
-function Waveform({ wave }: { wave: Record<Channel, number[]> }) {
+function Waveform({
+  wave,
+  theme,
+}: {
+  wave: Record<Channel, number[]>;
+  theme: "light" | "dark";
+}) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const canvas = ref.current;
     if (!canvas) return;
     const { ctx, width } = prepare(canvas, 196);
+    const styles = getComputedStyle(canvas);
     ctx.clearRect(0, 0, width, 196);
     CHANNELS.forEach((ch, index) => {
       const y0 = index * 49 + 24.5;
-      ctx.strokeStyle = "#e5e5e5";
+      ctx.strokeStyle = styles.getPropertyValue("--chart-grid").trim();
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(0, y0);
       ctx.lineTo(width, y0);
       ctx.stroke();
-      ctx.fillStyle = "#555555";
+      ctx.fillStyle = styles.getPropertyValue("--chart-label").trim();
       ctx.font = "11px sans-serif";
       ctx.fillText(ch, 8, index * 49 + 14);
-      ctx.strokeStyle = COLORS[ch];
+      ctx.strokeStyle = styles.getPropertyValue(COLORS[ch]).trim();
       ctx.lineWidth = 1.4;
       ctx.beginPath();
       wave[ch].forEach((value, i) => {
@@ -60,7 +67,7 @@ function Waveform({ wave }: { wave: Record<Channel, number[]> }) {
       });
       ctx.stroke();
     });
-  }, [wave]);
+  }, [wave, theme]);
   return (
     <canvas
       ref={ref}
@@ -73,6 +80,7 @@ function Waveform({ wave }: { wave: Record<Channel, number[]> }) {
 
 function TrendChart({
   trend,
+  theme,
 }: {
   trend: Array<{
     t: number;
@@ -80,15 +88,17 @@ function TrendChart({
     workload: number | null;
     fatigue: number | null;
   }>;
+  theme: "light" | "dark";
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const canvas = ref.current;
     if (!canvas) return;
     const { ctx, width } = prepare(canvas, 144);
+    const styles = getComputedStyle(canvas);
     const y = (v: number) => 72 - Math.max(-3, Math.min(3, v)) * 21;
     ctx.clearRect(0, 0, width, 144);
-    ctx.strokeStyle = "#e5e5e5";
+    ctx.strokeStyle = styles.getPropertyValue("--chart-grid").trim();
     ctx.lineWidth = 1;
     for (const tick of [-2, 0, 2]) {
       ctx.beginPath();
@@ -96,17 +106,14 @@ function TrendChart({
       ctx.lineTo(width, y(tick));
       ctx.stroke();
     }
-    const lines: Array<
-      ["engagement" | "workload" | "fatigue", string, number[]]
-    > = [
-      ["engagement", "#287fa3", []],
-      ["workload", "#ad7a31", [7, 4]],
-      ["fatigue", "#aa5a80", [2, 4]],
+    const lines: Array<["engagement" | "workload" | "fatigue", string]> = [
+      ["engagement", "--series-blue"],
+      ["workload", "--series-amber"],
+      ["fatigue", "--series-pink"],
     ];
-    lines.forEach(([metric, color, dash]) => {
-      ctx.strokeStyle = color;
+    lines.forEach(([metric, color]) => {
+      ctx.strokeStyle = styles.getPropertyValue(color).trim();
       ctx.lineWidth = 1.8;
-      ctx.setLineDash(dash);
       ctx.beginPath();
       let started = false;
       trend.forEach((point, i) => {
@@ -122,8 +129,7 @@ function TrendChart({
       });
       ctx.stroke();
     });
-    ctx.setLineDash([]);
-  }, [trend]);
+  }, [trend, theme]);
   return (
     <canvas
       ref={ref}
@@ -134,11 +140,21 @@ function TrendChart({
   );
 }
 
-function headColor(value: number | null | undefined): string {
-  if (value == null) return "#eeeeee";
+function headColor(
+  value: number | null | undefined,
+  theme: "light" | "dark",
+): string {
+  if (value == null) return "var(--band-track)";
   const strength = Math.min(1, Math.abs(value) / 2);
-  const neutral = [231, 231, 231];
-  const target = value >= 0 ? [211, 110, 110] : [96, 158, 190];
+  const neutral = theme === "dark" ? [52, 59, 66] : [231, 231, 231];
+  const target =
+    theme === "dark"
+      ? value >= 0
+        ? [170, 84, 94]
+        : [68, 126, 155]
+      : value >= 0
+        ? [211, 110, 110]
+        : [96, 158, 190];
   const [r, g, b] = neutral.map((base, i) =>
     Math.round(base + (target[i] - base) * strength),
   );
@@ -150,6 +166,7 @@ export function LivePanels({
   connected,
   wave,
   trend,
+  theme,
 }: {
   snapshot: Snapshot | null;
   connected: boolean;
@@ -160,6 +177,7 @@ export function LivePanels({
     workload: number | null;
     fatigue: number | null;
   }>;
+  theme: "light" | "dark";
 }) {
   const [band, setBand] = useState<"alpha" | "theta" | "beta">("alpha");
   const quality = snapshot?.quality;
@@ -215,7 +233,7 @@ export function LivePanels({
         <h3>
           실시간 뇌파 <span>1–40 Hz · µV</span>
         </h3>
-        <Waveform wave={wave} />
+        <Waveform wave={wave} theme={theme} />
       </section>
       <section className="telemetry-section">
         <h3>
@@ -229,7 +247,7 @@ export function LivePanels({
           <span>피로</span>
           <b>{z?.fatigue == null ? "—" : z.fatigue.toFixed(1)}</b>
         </div>
-        <TrendChart trend={trend} />
+        <TrendChart trend={trend} theme={theme} />
         <div className="legend">
           <span>몰입</span>
           <span>작업 부하</span>
@@ -261,13 +279,13 @@ export function LivePanels({
             rx="89"
             ry="88"
             fill="none"
-            stroke="#aaaaaa"
+            stroke="var(--chart-axis)"
             strokeWidth="2"
           />
           <path
             d="M100 20 L110 6 L120 20"
             fill="none"
-            stroke="#aaaaaa"
+            stroke="var(--chart-axis)"
             strokeWidth="2"
           />
           {CHANNELS.map((ch) => {
@@ -275,12 +293,12 @@ export function LivePanels({
               value = snapshot?.head?.[ch]?.[band];
             return (
               <g key={ch}>
-                <circle cx={x} cy={y} r="19" fill={headColor(value)} />
+                <circle cx={x} cy={y} r="19" fill={headColor(value, theme)} />
                 <text
                   x={x}
                   y={y + 4}
                   textAnchor="middle"
-                  fill="#222"
+                  fill="var(--ink)"
                   fontSize="10"
                 >
                   {ch}
@@ -289,7 +307,7 @@ export function LivePanels({
                   x={x}
                   y={y + 32}
                   textAnchor="middle"
-                  fill="#555"
+                  fill="var(--muted)"
                   fontSize="10"
                 >
                   {value == null ? "—" : `${value > 0 ? "+" : ""}${value}`}

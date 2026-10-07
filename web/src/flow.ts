@@ -1,7 +1,7 @@
 import type { Channel } from "./types";
 import { CHANNELS } from "./types";
 
-export type MeasurementMode = "demo" | "standard";
+export type MeasurementMode = "demo" | "standard" | "test";
 
 export function allSensorsGood(
   quality: Record<Channel, number> | null | undefined,
@@ -12,7 +12,7 @@ export function allSensorsGood(
 }
 
 export function restSeconds(mode: MeasurementMode): number {
-  return mode === "demo" ? 30 : 60;
+  return mode === "standard" ? 60 : 30;
 }
 
 export function responseLabel(responsive: boolean | null): string {

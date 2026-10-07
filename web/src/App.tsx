@@ -3,7 +3,9 @@ import {
   Suspense,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useReducer,
+  useRef,
   useState,
 } from "react";
 import { ActivityRunner } from "./activities/ActivityRunner";
@@ -36,9 +38,11 @@ type Screen =
   | "activity_intro"
   | "activity_running"
   | "activity_summary"
+  | "skipping"
   | "analyzing"
   | "results"
   | "error";
+type Theme = "light" | "dark";
 type FlowState = {
   screen: Screen;
   busy: boolean;
@@ -63,9 +67,6 @@ const initial: FlowState = {
 function reducer(state: FlowState, action: FlowAction): FlowState {
   return { ...state, ...action.patch };
 }
-const delay = (ms: number) =>
-  new Promise<void>((resolve) => window.setTimeout(resolve, ms));
-
 export default function App() {
   const [flow, dispatch] = useReducer(reducer, initial);
   const update = (patch: Partial<FlowState>) =>
@@ -77,10 +78,34 @@ export default function App() {
   const [activityCount, setActivityCount] = useState(4);
   const [recordMarkers, setRecordMarkers] = useState(false);
   const [largeText, setLargeText] = useState(false);
+  const [theme, setTheme] = useState<Theme>(() => {
+    try {
+      return localStorage.getItem("brainfit-theme") === "dark"
+        ? "dark"
+        : "light";
+    } catch {
+      return "light";
+    }
+  });
   const [remaining, setRemaining] = useState(0);
   const [restRemaining, setRestRemaining] = useState(0);
+  const skipCountdown = useRef<(() => void) | null>(null);
+  const endedBlocks = useRef(new Set<number>());
+  const pendingTrials = useRef(new Set<Promise<void>>());
   const { snapshot, connected, wave, trend, qualityReady, clear } =
     useLiveSocket();
+
+  useLayoutEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute("content", theme === "dark" ? "#111315" : "#f5f5f4");
+    try {
+      localStorage.setItem("brainfit-theme", theme);
+    } catch {
+      /* 저장소를 사용할 수 없어도 현재 화면의 테마는 유지한다. */
+    }
+  }, [theme]);
 
   useEffect(() => {
     if (flow.screen !== "activity_summary" || restRemaining <= 0) return;
@@ -114,6 +139,7 @@ export default function App() {
       });
       await liveApi.phase("signal_check");
       sessionStorage.setItem("brainfit-live-active", "1");
+      endedBlocks.current.clear();
       clear();
       update({
         screen: "signal",
@@ -132,7 +158,18 @@ export default function App() {
   const countDown = async (seconds: number) => {
     for (let n = seconds; n > 0; n--) {
       setRemaining(n);
-      await delay(1000);
+      const skipped = await new Promise<boolean>((resolve) => {
+        const timer = window.setTimeout(() => {
+          skipCountdown.current = null;
+          resolve(false);
+        }, 1000);
+        skipCountdown.current = () => {
+          window.clearTimeout(timer);
+          skipCountdown.current = null;
+          resolve(true);
+        };
+      });
+      if (skipped) break;
     }
     setRemaining(0);
   };
@@ -209,16 +246,36 @@ export default function App() {
     }
   };
   const sendTrial = useCallback(async (trial: TrialPayload) => {
-    const result = await liveApi.trial(trial);
-    if (!result.ok) throw new Error("시행 기록을 저장하지 못했습니다.");
-  }, []);
-  const completeActivity = async () => {
-    if (!flow.choice) return;
+    if (endedBlocks.current.has(trial.block)) return;
+    const request = liveApi.trial(trial).then((result) => {
+      if (!result.ok) throw new Error("시행 기록을 저장하지 못했습니다.");
+    });
+    pendingTrials.current.add(request);
     try {
+      await request;
+    } finally {
+      pendingTrials.current.delete(request);
+    }
+  }, []);
+  const completeActivity = async (skip = false) => {
+    if (!flow.choice) return;
+    const block =
+      flow.screen === "activity_intro" ? flow.block + 1 : flow.block;
+    if (endedBlocks.current.has(block)) return;
+    endedBlocks.current.add(block);
+    if (skip) update({ screen: "skipping", busy: true, block });
+    try {
+      if (skip && flow.screen === "activity_intro")
+        await liveApi.mark("block_start", { task: flow.choice.task, block });
+      if (skip) await Promise.allSettled([...pendingTrials.current]);
       const response = await liveApi.mark("block_end", {
         task: flow.choice.task,
-        block: flow.block,
+        block,
       });
+      if (skip) {
+        await loadNext();
+        return;
+      }
       setRestRemaining(5);
       update({
         screen: "activity_summary",
@@ -230,6 +287,7 @@ export default function App() {
   };
   const restart = () => {
     sessionStorage.removeItem("brainfit-live-active");
+    endedBlocks.current.clear();
     update({
       screen: "setup",
       busy: false,
@@ -260,6 +318,7 @@ export default function App() {
     "activity_intro",
     "activity_running",
     "activity_summary",
+    "skipping",
   ].includes(flow.screen);
 
   return (
@@ -271,6 +330,25 @@ export default function App() {
           </strong>
         </div>
         <div className="header-actions">
+          <div className="theme-switch" role="group" aria-label="화면 테마">
+            <button
+              type="button"
+              aria-pressed={theme === "light"}
+              onClick={() => setTheme("light")}
+            >
+              라이트
+            </button>
+            <button
+              type="button"
+              aria-pressed={theme === "dark"}
+              onClick={() => setTheme("dark")}
+            >
+              다크
+            </button>
+          </div>
+          {mode === "test" && flow.screen !== "setup" && (
+            <span className="test-mode-label">테스트 모드</span>
+          )}
           <button
             className="text-toggle"
             onClick={() => setLargeText((value) => !value)}
@@ -353,6 +431,9 @@ export default function App() {
                   >
                     <option value="demo">시연 — 휴식 각 30초</option>
                     <option value="standard">정식 — 휴식 각 60초</option>
+                    <option value="test">
+                      테스트 — 휴식 각 30초·단계별 건너뛰기
+                    </option>
                   </select>
                 </label>
                 <label>
@@ -369,6 +450,12 @@ export default function App() {
                   </select>
                 </label>
               </div>
+              {mode === "test" && (
+                <p className="test-mode-note">
+                  각 단계를 건너뛸 수 있습니다. 건너뛴 단계의 지표는 판단 보류로
+                  표시될 수 있습니다.
+                </p>
+              )}
               {source === "lsl" && (
                 <label className="marker-option">
                   <input
@@ -422,6 +509,15 @@ export default function App() {
               >
                 기준선 측정 시작
               </button>
+              {mode === "test" && (
+                <button
+                  className="test-skip"
+                  disabled={flow.busy}
+                  onClick={beginBaseline}
+                >
+                  착용 확인 건너뛰기
+                </button>
+              )}
             </section>
           )}
           {(flow.screen === "baseline_eo" || flow.screen === "baseline_ec") && (
@@ -446,6 +542,16 @@ export default function App() {
                   ? "화면 가운데를 바라보며 편하게 호흡하세요."
                   : "소리가 나면 눈을 뜨세요."}
               </p>
+              {mode === "test" && (
+                <button
+                  className="test-skip"
+                  onClick={() => skipCountdown.current?.()}
+                >
+                  {flow.screen === "baseline_eo"
+                    ? "눈 뜬 휴식 건너뛰기"
+                    : "눈 감은 휴식 건너뛰기"}
+                </button>
+              )}
             </section>
           )}
           {flow.screen === "brain_type" && (
@@ -488,17 +594,42 @@ export default function App() {
               >
                 활동 시작
               </button>
+              {mode === "test" && (
+                <button
+                  className="test-skip"
+                  disabled={flow.busy}
+                  onClick={() => void completeActivity(true)}
+                >
+                  활동 건너뛰기
+                </button>
+              )}
             </section>
           )}
           {flow.screen === "activity_running" && flow.choice && (
-            <ActivityRunner
-              key={flow.block}
-              choice={flow.choice}
-              block={flow.block}
-              onTrial={sendTrial}
-              onDone={completeActivity}
-              onError={(message) => fail(new Error(message))}
-            />
+            <div className="activity-stage">
+              <ActivityRunner
+                key={flow.block}
+                choice={flow.choice}
+                block={flow.block}
+                onTrial={sendTrial}
+                onDone={() => completeActivity()}
+                onError={(message) => fail(new Error(message))}
+              />
+              {mode === "test" && (
+                <button
+                  className="test-skip"
+                  disabled={flow.busy}
+                  onClick={() => void completeActivity(true)}
+                >
+                  진행 중인 활동 건너뛰기
+                </button>
+              )}
+            </div>
+          )}
+          {flow.screen === "skipping" && (
+            <section className="center-screen">
+              <h1>다음 단계로 이동하고 있어요</h1>
+            </section>
           )}
           {flow.screen === "activity_summary" && (
             <section className="center-screen activity-summary">
@@ -543,6 +674,15 @@ export default function App() {
                   ? `잠깐 쉬어요 · ${restRemaining}초`
                   : "다음 활동 보기"}
               </button>
+              {mode === "test" && restRemaining > 0 && (
+                <button
+                  className="test-skip"
+                  disabled={flow.busy}
+                  onClick={loadNext}
+                >
+                  활동 사이 휴식 건너뛰기
+                </button>
+              )}
             </section>
           )}
           {flow.screen === "analyzing" && (
@@ -579,6 +719,7 @@ export default function App() {
             connected={connected}
             wave={wave}
             trend={trend}
+            theme={theme}
           />
         )}
       </div>

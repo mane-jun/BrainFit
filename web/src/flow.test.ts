@@ -11,8 +11,9 @@ describe("실시간 진행 규칙", () => {
     );
   });
 
-  it("시연·정식 기준선은 각각 30초·60초다", () => {
+  it("시연·테스트 기준선은 30초, 정식 기준선은 60초다", () => {
     expect(restSeconds("demo")).toBe(30);
+    expect(restSeconds("test")).toBe(30);
     expect(restSeconds("standard")).toBe(60);
   });
 

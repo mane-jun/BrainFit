@@ -61,8 +61,13 @@ export function ActivityRunner({
     kind: "countdown",
     title: "곧 시작합니다",
   });
+  const [feedback, setFeedback] = useState<{
+    value: number;
+    label: string;
+  } | null>(null);
   const promptRef = useRef(prompt);
   const takeRef = useRef<(value: number) => void>(() => undefined);
+  const feedbackTimer = useRef<number | undefined>(undefined);
   const callbacks = useRef({ onTrial, onDone, onError });
   useEffect(() => {
     callbacks.current = { onTrial, onDone, onError };
@@ -92,7 +97,14 @@ export function ActivityRunner({
     const controller = new AbortController();
     const { signal } = controller;
     let index = 0;
+    const flashFeedback = (value: number, label = "입력됨") => {
+      window.clearTimeout(feedbackTimer.current);
+      setFeedback({ value, label });
+      feedbackTimer.current = window.setTimeout(() => setFeedback(null), 240);
+    };
     const display = async (next: Prompt) => {
+      window.clearTimeout(feedbackTimer.current);
+      setFeedback(null);
       setPrompt(next);
       promptRef.current = next;
       await frame();
@@ -122,6 +134,7 @@ export function ActivityRunner({
         if (selected !== null || elapsed < 0.15 || signal.aborted) return;
         selected = value;
         reaction = elapsed;
+        flashFeedback(value);
       };
       await pause(visibleMs, signal);
       if (visibleMs < totalMs)
@@ -222,6 +235,7 @@ export function ActivityRunner({
           let falseStart = false;
           takeRef.current = () => {
             falseStart = true;
+            flashFeedback(1, "너무 일찍 눌렀어요");
           };
           await pause(2000 + Math.random() * 4000, signal);
           takeRef.current = () => undefined;
@@ -363,6 +377,7 @@ export function ActivityRunner({
     });
     return () => {
       controller.abort();
+      window.clearTimeout(feedbackTimer.current);
       takeRef.current = () => undefined;
     };
   }, [choice.activity, choice.level, choice.task, block]);
@@ -399,16 +414,23 @@ export function ActivityRunner({
       </div>
       <p className="activity-hint">{prompt.hint}</p>
       {(prompt.kind === "binary" || prompt.kind === "wait") && (
-        <button className="response-button" onClick={() => choose(1)}>
-          반응하기 <kbd>Space</kbd>
+        <button
+          className={`response-button ${feedback?.value === 1 ? "registered" : ""}`}
+          onClick={() => choose(1)}
+        >
+          {feedback?.value === 1 ? feedback.label : "반응하기"} <kbd>Space</kbd>
         </button>
       )}
       {prompt.kind === "choice" && (
         <div className="choice-grid">
           {prompt.options?.map((option, i) => (
-            <button key={`${option}-${i}`} onClick={() => choose(i)}>
+            <button
+              key={`${option}-${i}`}
+              className={feedback?.value === i ? "registered" : ""}
+              onClick={() => choose(i)}
+            >
               <kbd>{i + 1}</kbd>
-              {option}
+              {feedback?.value === i ? feedback.label : option}
             </button>
           ))}
         </div>
