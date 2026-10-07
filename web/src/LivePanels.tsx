@@ -9,10 +9,10 @@ const NAMES: Record<Channel, string> = {
   TP10: "오른쪽 귀 뒤",
 };
 const COLORS: Record<Channel, string> = {
-  TP9: "#242424",
-  AF7: "#555555",
-  AF8: "#777777",
-  TP10: "#999999",
+  TP9: "#287fa3",
+  AF7: "#ad7a31",
+  AF8: "#aa5a80",
+  TP10: "#398d75",
 };
 const POS: Record<Channel, [number, number]> = {
   TP9: [38, 122],
@@ -99,9 +99,9 @@ function TrendChart({
     const lines: Array<
       ["engagement" | "workload" | "fatigue", string, number[]]
     > = [
-      ["engagement", "#202020", []],
-      ["workload", "#666666", [7, 4]],
-      ["fatigue", "#999999", [2, 4]],
+      ["engagement", "#287fa3", []],
+      ["workload", "#ad7a31", [7, 4]],
+      ["fatigue", "#aa5a80", [2, 4]],
     ];
     lines.forEach(([metric, color, dash]) => {
       ctx.strokeStyle = color;
@@ -136,8 +136,13 @@ function TrendChart({
 
 function headColor(value: number | null | undefined): string {
   if (value == null) return "#eeeeee";
-  const tone = Math.round(150 - Math.max(-2, Math.min(2, value)) * 48);
-  return `rgb(${tone},${tone},${tone})`;
+  const strength = Math.min(1, Math.abs(value) / 2);
+  const neutral = [231, 231, 231];
+  const target = value >= 0 ? [211, 110, 110] : [96, 158, 190];
+  const [r, g, b] = neutral.map((base, i) =>
+    Math.round(base + (target[i] - base) * strength),
+  );
+  return `rgb(${r},${g},${b})`;
 }
 
 export function LivePanels({
@@ -275,7 +280,7 @@ export function LivePanels({
                   x={x}
                   y={y + 4}
                   textAnchor="middle"
-                  fill={value != null && value > 0.5 ? "#fff" : "#222"}
+                  fill="#222"
                   fontSize="10"
                 >
                   {ch}
@@ -294,8 +299,8 @@ export function LivePanels({
           })}
         </svg>
         <p className="panel-note">
-          점 4개는 센서 위치입니다. 명암은 휴식 대비 변화이며 뇌 내부 위치를
-          뜻하지 않습니다.
+          점 4개는 센서 위치입니다. 파랑은 휴식 대비 감소, 붉은색은 증가를
+          뜻하며 뇌 내부 위치를 나타내지 않습니다.
         </p>
       </section>
       <section className="telemetry-section">
@@ -303,7 +308,7 @@ export function LivePanels({
           대역 구성 <span>상대 파워</span>
         </h3>
         {(["theta", "alpha", "beta"] as const).map((key) => (
-          <div className="band-row" key={key}>
+          <div className={`band-row band-${key}`} key={key}>
             <span>
               {key === "theta" ? "세타" : key === "alpha" ? "알파" : "베타"}
             </span>

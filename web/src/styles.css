@@ -640,7 +640,26 @@ kbd {
   font-size: 14px;
   font-variant-numeric: tabular-nums;
 }
+.quality-cell.good {
+  border-color: #86b7aa;
+  background: #f2f8f5;
+}
+.quality-cell.good strong {
+  color: #287b61;
+}
+.quality-cell.fair {
+  border-color: #d6ba8a;
+  background: #fbf7ef;
+}
+.quality-cell.fair strong {
+  color: #946521;
+}
+.quality-cell.poor {
+  border-color: #d8a3a5;
+  background: #fcf4f4;
+}
 .quality-cell.poor strong {
+  color: #a6474e;
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -673,6 +692,15 @@ kbd {
   font-size: 18px;
   font-variant-numeric: tabular-nums;
 }
+.metric-row b:nth-of-type(1) {
+  color: #287fa3;
+}
+.metric-row b:nth-of-type(2) {
+  color: #946521;
+}
+.metric-row b:nth-of-type(3) {
+  color: #aa5a80;
+}
 .legend {
   display: flex;
   gap: 18px;
@@ -686,13 +714,13 @@ kbd {
   width: 13px;
   margin-right: 5px;
   vertical-align: middle;
-  border-top: 2px solid #222;
+  border-top: 2px solid #287fa3;
 }
 .legend span:nth-child(2)::before {
-  border-top: 2px dashed #666;
+  border-top: 2px dashed #ad7a31;
 }
 .legend span:nth-child(3)::before {
-  border-top: 2px dotted #999;
+  border-top: 2px dotted #aa5a80;
 }
 .head-section select {
   padding: 4px 7px;
@@ -728,7 +756,13 @@ kbd {
 .band-row i {
   display: block;
   height: 100%;
-  background: #555;
+  background: #287fa3;
+}
+.band-row.band-alpha i {
+  background: #ad7a31;
+}
+.band-row.band-beta i {
+  background: #398d75;
 }
 .band-row strong {
   color: var(--ink);
