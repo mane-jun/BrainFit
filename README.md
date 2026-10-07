@@ -14,10 +14,14 @@ python tasks/battery.py --auto --speed 60 --mode demo          # 과제 앱 자�
 ```
 
 ## 라이브 데모 (본선용)
-```bash
-uvicorn server.main:app --reload     # http://localhost:8000 → 입력 '시뮬레이터'로 기기 없이 전체 흐름 확인
+```powershell
+cd web
+npm install
+npm run build
+cd ..
+python -m uvicorn server.main:app --reload
 ```
-실제 Muse: BlueMuse Start Streaming 후 입력을 'Muse 2 (LSL)'로. 녹화 재생: `data/demo/synthetic_demo.npz`.
+`http://localhost:8000`에서 정식 라이브 화면을 연다. 개발 중에는 FastAPI와 별도로 `cd web; npm run dev`를 실행해 `http://127.0.0.1:5173`에서 확인한다. 기존 검증 화면은 `http://localhost:8000/static/debug.html`에 남겨 두었다. 실제 Muse: BlueMuse Start Streaming 후 입력을 'Muse 2 (LSL)'로. 녹화 재생: `data/demo/synthetic_demo.npz`.
 설계는 [LIVE_DEMO](docs/LIVE_DEMO.md), 웹 구현 계획은 [plans/2026-10-08-live-demo-web](docs/plans/2026-10-08-live-demo-web.md).
 
 ## 실측

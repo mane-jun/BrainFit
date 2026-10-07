@@ -17,7 +17,7 @@
                 FastAPI (server/main.py + server/live.py)
                  REST /api/live/*   WebSocket /ws/live (0.5초 tick)
                                          │
-                웹 화면: 지금은 /static/debug.html (검증용) → web/ (React, 본 UI, 바이브코딩 대상)
+                웹 화면: web/ (React, 정식 UI), /static/debug.html (기존 검증용)
 ```
 
 - **입력 소스 3종을 같은 인터페이스로** 둔 이유: 기기 없이도(시뮬레이터) / 실제 뇌파로(녹화 재생) 화면을 만들고, 시연 당일 기기가 말썽이면 재생으로 즉시 전환하기 위해.
@@ -26,7 +26,8 @@
 
 실행:
 ```bash
-uvicorn server.main:app --reload        # http://localhost:8000  → 디버그 화면
+cd web && npm install && npm run build
+cd .. && uvicorn server.main:app --reload  # http://localhost:8000 → 정식 화면
 ```
 
 ## 2. 화면 흐름 (상태 기계)

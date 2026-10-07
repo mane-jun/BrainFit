@@ -16,3 +16,4 @@ streamlit>=1.35
 # 개발
 pytest>=8
 ruff>=0.5
+httpx2>=0.1  # Starlette/FastAPI TestClient

@@ -32,3 +32,4 @@ Thumbs.db
 # 웹
 web/node_modules/
 web/dist/
+*.tsbuildinfo

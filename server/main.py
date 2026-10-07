@@ -9,7 +9,8 @@
   GET  /users/{user}/history    개인 기준선 이력
   GET  /reports/{name}/{file}   그림 PNG
   라이브 데모: server/live.py (/api/live/*, /ws/live) — docs/LIVE_DEMO.md
-  디버그 화면: http://localhost:8000/  (→ /static/debug.html)
+  정식 화면: http://localhost:8000/  (`web/dist` 빌드 후)
+  디버그 화면: http://localhost:8000/static/debug.html
 """
 import json
 import sys
@@ -35,11 +36,14 @@ app.include_router(live_router)
 (OUT / "live").mkdir(parents=True, exist_ok=True)
 app.mount("/live-files", StaticFiles(directory=OUT / "live"), name="live-files")
 app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static")
+WEB_DIST = ROOT / "web" / "dist"
+if WEB_DIST.is_dir():
+    app.mount("/assets", StaticFiles(directory=WEB_DIST / "assets"), name="web-assets")
 
 
 @app.get("/")
 def root():
-    return RedirectResponse("/static/debug.html")
+    return FileResponse(WEB_DIST / "index.html") if WEB_DIST.is_dir() else RedirectResponse("/static/debug.html")
 
 
 class AnalyzeReq(BaseModel):
