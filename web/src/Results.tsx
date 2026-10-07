@@ -103,28 +103,23 @@ export function Results({
               data={bars}
               margin={{ top: 12, right: 8, bottom: 18, left: -25 }}
             >
-              <CartesianGrid vertical={false} stroke="#244450" />
+              <CartesianGrid vertical={false} stroke="#e4e4e4" />
               <XAxis
                 dataKey="name"
-                tick={{ fill: "#abc0c3", fontSize: 11 }}
+                tick={{ fill: "#666666", fontSize: 11 }}
                 interval={0}
                 angle={-12}
                 textAnchor="end"
               />
-              <YAxis tick={{ fill: "#abc0c3", fontSize: 11 }} />
+              <YAxis tick={{ fill: "#666666", fontSize: 11 }} />
               <Tooltip
                 contentStyle={{
-                  background: "#193440",
-                  borderColor: "#45616a",
-                  color: "#f4f9f8",
+                  background: "#ffffff",
+                  borderColor: "#d2d2d2",
+                  color: "#202020",
                 }}
               />
-              <Bar
-                dataKey="engagement"
-                name="몰입 z"
-                fill="#59b8ba"
-                radius={[5, 5, 0, 0]}
-              />
+              <Bar dataKey="engagement" name="몰입 z" fill="#545454" />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -147,16 +142,16 @@ export function Results({
           </p>
           <ResponsiveContainer width="100%" height={310}>
             <RadarChart data={radar} outerRadius="70%">
-              <PolarGrid stroke="#3d5862" />
+              <PolarGrid stroke="#d2d2d2" />
               <PolarAngleAxis
                 dataKey="name"
-                tick={{ fill: "#bbccce", fontSize: 12 }}
+                tick={{ fill: "#555555", fontSize: 12 }}
               />
               <Radar
                 dataKey="score"
-                stroke="#efb56a"
-                fill="#efb56a"
-                fillOpacity={0.35}
+                stroke="#555555"
+                fill="#777777"
+                fillOpacity={0.2}
               />
             </RadarChart>
           </ResponsiveContainer>

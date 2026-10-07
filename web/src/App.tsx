@@ -252,25 +252,25 @@ export default function App() {
           : flow.screen === "results"
             ? 4
             : 3;
+  const showLivePanel = [
+    "signal",
+    "baseline_eo",
+    "baseline_ec",
+    "brain_type",
+    "activity_intro",
+    "activity_running",
+    "activity_summary",
+  ].includes(flow.screen);
 
   return (
     <div className={`app-shell ${largeText ? "large-text" : ""}`}>
       <header className="app-header">
         <div className="brand">
-          <div className="brand-mark">
-            <span />
-          </div>
-          <div>
-            <strong>
-              BrainFit <em>live</em>
-            </strong>
-            <small>뇌파와 수행을 함께 보는 인지 활동</small>
-          </div>
+          <strong>
+            BrainFit <em>live</em>
+          </strong>
         </div>
         <div className="header-actions">
-          <span className={`header-connection ${connected ? "on" : ""}`}>
-            {connected ? "실시간 연결" : "연결 중"}
-          </span>
           <button
             className="text-toggle"
             onClick={() => setLargeText((value) => !value)}
@@ -293,7 +293,7 @@ export default function App() {
           </div>
         ))}
       </nav>
-      <div className="workspace">
+      <div className={`workspace ${showLivePanel ? "" : "solo-workspace"}`}>
         <main className="task-panel">
           {flow.error && flow.screen !== "error" && (
             <div className="error-banner" role="alert">
@@ -413,7 +413,6 @@ export default function App() {
                 진행합니다.
               </p>
               <div className={`readiness ${qualityReady ? "ready" : ""}`}>
-                <span />
                 {qualityReady ? "신호가 안정되었습니다" : "센서 접촉 확인 중"}
               </div>
               <button
@@ -550,7 +549,6 @@ export default function App() {
             <section className="center-screen">
               <span className="eyebrow">측정 완료</span>
               <h1>결과를 정리하고 있어요</h1>
-              <div className="processing-orbit" />
             </section>
           )}
           {flow.screen === "results" && flow.result && (
@@ -575,12 +573,14 @@ export default function App() {
             </section>
           )}
         </main>
-        <LivePanels
-          snapshot={snapshot}
-          connected={connected}
-          wave={wave}
-          trend={trend}
-        />
+        {showLivePanel && (
+          <LivePanels
+            snapshot={snapshot}
+            connected={connected}
+            wave={wave}
+            trend={trend}
+          />
+        )}
       </div>
       <footer>
         BrainFit · 학습·훈련용 참고 지표 · 의학적 진단이 아닙니다.

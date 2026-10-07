@@ -9,10 +9,10 @@ const NAMES: Record<Channel, string> = {
   TP10: "오른쪽 귀 뒤",
 };
 const COLORS: Record<Channel, string> = {
-  TP9: "#5ab6dd",
-  AF7: "#f0b567",
-  AF8: "#ea83aa",
-  TP10: "#76c9ac",
+  TP9: "#242424",
+  AF7: "#555555",
+  AF8: "#777777",
+  TP10: "#999999",
 };
 const POS: Record<Channel, [number, number]> = {
   TP9: [38, 122],
@@ -40,13 +40,13 @@ function Waveform({ wave }: { wave: Record<Channel, number[]> }) {
     ctx.clearRect(0, 0, width, 196);
     CHANNELS.forEach((ch, index) => {
       const y0 = index * 49 + 24.5;
-      ctx.strokeStyle = "#244450";
+      ctx.strokeStyle = "#e5e5e5";
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(0, y0);
       ctx.lineTo(width, y0);
       ctx.stroke();
-      ctx.fillStyle = "#7f9aa3";
+      ctx.fillStyle = "#555555";
       ctx.font = "11px sans-serif";
       ctx.fillText(ch, 8, index * 49 + 14);
       ctx.strokeStyle = COLORS[ch];
@@ -88,7 +88,7 @@ function TrendChart({
     const { ctx, width } = prepare(canvas, 144);
     const y = (v: number) => 72 - Math.max(-3, Math.min(3, v)) * 21;
     ctx.clearRect(0, 0, width, 144);
-    ctx.strokeStyle = "#244450";
+    ctx.strokeStyle = "#e5e5e5";
     ctx.lineWidth = 1;
     for (const tick of [-2, 0, 2]) {
       ctx.beginPath();
@@ -96,14 +96,17 @@ function TrendChart({
       ctx.lineTo(width, y(tick));
       ctx.stroke();
     }
-    const lines: Array<["engagement" | "workload" | "fatigue", string]> = [
-      ["engagement", "#5ab6dd"],
-      ["workload", "#f0b567"],
-      ["fatigue", "#ea83aa"],
+    const lines: Array<
+      ["engagement" | "workload" | "fatigue", string, number[]]
+    > = [
+      ["engagement", "#202020", []],
+      ["workload", "#666666", [7, 4]],
+      ["fatigue", "#999999", [2, 4]],
     ];
-    lines.forEach(([metric, color]) => {
+    lines.forEach(([metric, color, dash]) => {
       ctx.strokeStyle = color;
       ctx.lineWidth = 1.8;
+      ctx.setLineDash(dash);
       ctx.beginPath();
       let started = false;
       trend.forEach((point, i) => {
@@ -119,6 +122,7 @@ function TrendChart({
       });
       ctx.stroke();
     });
+    ctx.setLineDash([]);
   }, [trend]);
   return (
     <canvas
@@ -131,11 +135,9 @@ function TrendChart({
 }
 
 function headColor(value: number | null | undefined): string {
-  if (value == null) return "#355260";
-  const x = Math.max(-1, Math.min(1, value / 2));
-  return x >= 0
-    ? `rgb(${170 + 58 * x},${113 - 35 * x},${91 - 22 * x})`
-    : `rgb(${83 + 15 * x},${150 + 11 * x},${165 - 58 * x})`;
+  if (value == null) return "#eeeeee";
+  const tone = Math.round(150 - Math.max(-2, Math.min(2, value)) * 48);
+  return `rgb(${tone},${tone},${tone})`;
 }
 
 export function LivePanels({
@@ -254,13 +256,13 @@ export function LivePanels({
             rx="89"
             ry="88"
             fill="none"
-            stroke="#43616a"
+            stroke="#aaaaaa"
             strokeWidth="2"
           />
           <path
             d="M100 20 L110 6 L120 20"
             fill="none"
-            stroke="#43616a"
+            stroke="#aaaaaa"
             strokeWidth="2"
           />
           {CHANNELS.map((ch) => {
@@ -273,7 +275,7 @@ export function LivePanels({
                   x={x}
                   y={y + 4}
                   textAnchor="middle"
-                  fill="#fff"
+                  fill={value != null && value > 0.5 ? "#fff" : "#222"}
                   fontSize="10"
                 >
                   {ch}
@@ -282,7 +284,7 @@ export function LivePanels({
                   x={x}
                   y={y + 32}
                   textAnchor="middle"
-                  fill="#a7bac0"
+                  fill="#555"
                   fontSize="10"
                 >
                   {value == null ? "—" : `${value > 0 ? "+" : ""}${value}`}
@@ -292,7 +294,7 @@ export function LivePanels({
           })}
         </svg>
         <p className="panel-note">
-          점 4개는 센서 위치입니다. 색은 휴식 대비 변화이며 뇌 내부 위치를
+          점 4개는 센서 위치입니다. 명암은 휴식 대비 변화이며 뇌 내부 위치를
           뜻하지 않습니다.
         </p>
       </section>
